@@ -75,6 +75,7 @@ type IPTables struct {
 	v3                int
 	mode              string // the underlying iptables operating mode, e.g. nf_tables
 	timeout           int    // time to wait for the iptables lock, default waits forever
+	netns             string
 }
 
 // Stat represents a structured statistic entry.
@@ -105,6 +106,12 @@ func Timeout(timeout int) option {
 	}
 }
 
+func Netns(ns string) option {
+	return func(ipt *IPTables) {
+		ipt.netns = ns
+	}
+}
+
 // New creates a new IPTables configured with the options passed as parameter.
 // For backwards compatibility, by default always uses IPv4 and timeout 0.
 // i.e. you can create an IPv6 IPTables using a timeout of 5 seconds passing
@@ -125,7 +132,12 @@ func New(opts ...option) (*IPTables, error) {
 	if err != nil {
 		return nil, err
 	}
-	ipt.path = path
+
+	if ipt.netns != "" {
+		ipt.path = fmt.Sprintf("ip netns exec %s %s", ipt.netns, path)
+	} else {
+		ipt.path = path
+	}
 
 	vstring, err := getIptablesVersionString(path)
 	if err != nil {
