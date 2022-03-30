@@ -132,12 +132,7 @@ func New(opts ...option) (*IPTables, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if ipt.netns != "" {
-		ipt.path = fmt.Sprintf("ip netns exec %s %s", ipt.netns, path)
-	} else {
-		ipt.path = path
-	}
+	ipt.path = path
 
 	vstring, err := getIptablesVersionString(path)
 	if err != nil {
@@ -531,6 +526,12 @@ func (ipt *IPTables) runWithOutput(args []string, stdout io.Writer) error {
 		Args:   args,
 		Stdout: stdout,
 		Stderr: &stderr,
+	}
+
+	if ipt.netns != "" {
+		cmd.Path, _ = exec.LookPath("ip")
+		netnsArgs := []string{"ip", "netns", "exec", ipt.netns}
+		cmd.Args = append(netnsArgs, cmd.Args...)
 	}
 
 	if err := cmd.Run(); err != nil {
